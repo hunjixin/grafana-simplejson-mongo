@@ -9,7 +9,7 @@ import (
 func main() {
 	conf := api.Config{
 		Port:      8080,
-		MongoHost: "mongodb://8.130.164.80:27017",
+		MongoHost: "mongodb://127.0.0.1:27017",
 	}
 	errs := make(chan error, 2)
 	api.StartHTTPServer(conf, errs)
