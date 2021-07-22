@@ -1,27 +1,29 @@
 package mongodb
 
 import (
+	"context"
 	"errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"time"
-
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
 
 type SessionProvider struct {
-	Session *mgo.Session
+	Session *mongo.Client
 }
 
 func NewSession(host string) SessionProvider {
-	var sp SessionProvider
-	session, err := mgo.Dial("mongodb://" + host)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(host))
 	if err != nil {
-		log.Println(err)
 		panic(err)
 	}
-	sp.Session = session
-	return sp
+	return SessionProvider{
+		client,
+	}
 }
 
 func convertFloat(v interface{}) float64 {
@@ -29,6 +31,10 @@ func convertFloat(v interface{}) float64 {
 	switch v.(type) {
 	case int:
 		r = float64(v.(int))
+	case int32:
+		r = float64(v.(int32))
+	case int64:
+		r = float64(v.(int64))
 	case float64:
 		r = v.(float64)
 	case time.Time:

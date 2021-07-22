@@ -13,11 +13,12 @@ func (conf *Config) reqSearch(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	var resp []string
-	for i := 0; i < 5; i++ {
-		resp = append(resp, "OK"+string(i))
-	}
-	bytes, err := json.Marshal(resp)
+
+	//{用户，服务,api,time}
+	bytes, err := json.Marshal([]string{
+		"traces.call",              //no work
+		"traces.call.{*,*,*,time}", //某个用户 api
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

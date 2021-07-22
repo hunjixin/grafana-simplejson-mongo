@@ -3,14 +3,14 @@
 ## Installation
 
 ```
-go get github.com/m-masataka/grafana-simplejson-mongo
+go get github.com/hunjixin/grafana-simplejson-mongo
 ```
 
 ## Usage
 
 Import package
 ```
-import "github.com/m-masataka/grafana-simplejson-mongo/api"
+import "github.com/hunjixin/grafana-simplejson-mongo/api"
 ```
 
 Set up the parameter to ``api.Config``.
