@@ -1,19 +1,19 @@
 package mongodb
 
 import (
+	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"strconv"
 	"time"
-	"fmt"
-
-	"gopkg.in/mgo.v2/bson"
 )
 
-func (sp *SessionProvider) GetTableData(dbname string, collection string, timecol string, from time.Time, to time.Time) ([][]string, [][]string, error) {
+func (sp *SessionProvider) GetTableData(dbname string, collection string, timecol string, from time.Time, to time.Time) ([][]string, [][]interface{}, error) {
 	var keys [][]string
-	var rows [][]string
-	c := sp.Session.DB(dbname).C(collection)
-	var results []bson.M
+	var rows [][]interface{}
+	c := sp.Session.Database(dbname).Collection(collection)
 
 	var find bson.M
 	if timecol != "" {
@@ -27,12 +27,19 @@ func (sp *SessionProvider) GetTableData(dbname string, collection string, timeco
 		find = nil
 	}
 
-	err := c.Find(find).All(&results)
+	var results []bson.M
+	ctx := context.TODO()
+	cur, err := c.Find(ctx, find)
 	if err != nil {
 		log.Println(err)
 		return keys, rows, err
 	}
-	log.Println(results)
+	err = cur.All(ctx, &results)
+	if err != nil {
+		log.Println(err)
+		return keys, rows, err
+	}
+
 	if len(results) < 1 {
 		return keys, rows, nil
 	}
@@ -42,8 +49,9 @@ func (sp *SessionProvider) GetTableData(dbname string, collection string, timeco
 		key = append(key, defineType(v))
 		keys = append(keys, key)
 	}
+
 	for i := 0; i < len(results); i++ {
-		var row []string
+		var row []interface{}
 		for _, key := range keys {
 			row = append(row, convertString(results[i][key[0]]))
 		}
@@ -59,7 +67,7 @@ func defineType(v interface{}) string {
 		ret = "number"
 	case time.Time:
 		ret = "time"
-	case bson.ObjectId:
+	case primitive.ObjectID:
 		ret = "string"
 	case string:
 		ret = "string"
@@ -67,15 +75,15 @@ func defineType(v interface{}) string {
 	return ret
 }
 
-func convertString(v interface{}) string {
-	var ret string
+func convertString(v interface{}) interface{} {
+	var ret interface{}
 	switch v.(type) {
 	case int:
 		ret = strconv.Itoa(v.(int))
 	case time.Time:
-		ret = v.(time.Time).String()
-	case bson.ObjectId:
-		ret = v.(bson.ObjectId).String()
+		ret = v.(time.Time)
+	case primitive.ObjectID:
+		ret = v.(primitive.ObjectID).String()
 	case string:
 		ret = v.(string)
 	case float64:

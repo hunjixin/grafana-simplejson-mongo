@@ -35,9 +35,9 @@ type SearchRequest struct {
 }
 
 type TableResponse struct {
-	Columns []TableColumn `json:"columns"`
-	Rows    [][]string    `json:"rows"`
-	Type    string        `json:"type"`
+	Columns []TableColumn   `json:"columns"`
+	Rows    [][]interface{} `json:"rows"`
+	Type    string          `json:"type"`
 }
 
 type TableColumn struct {
