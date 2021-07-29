@@ -11,7 +11,7 @@ func main() {
 	var port int
 	var mongoHost string
 	flag.StringVar(&mongoHost, "mongodb", "mongodb://localhost", "mongodb host")
-	flag.IntVar(&port, "port", 8082, "server port")
+	flag.IntVar(&port, "port", 8080, "server port")
 	flag.Parse()
 	log.Printf("port: %d, mongodb host: %s\n", port, mongoHost)
 	conf := api.Config{
