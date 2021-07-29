@@ -83,13 +83,13 @@ func BuildTimeSeriesPipe(userCol, serviceCol, apiCol, timecol string, from time.
 
 	match := bson.D{}
 	if userCol != "*" {
-		match = append(match, bson.E{"name", primitive.Regex{Pattern: "/" + userCol + "/", Options: "i"}})
+		match = append(match, bson.E{"name", primitive.Regex{Pattern:  userCol , Options: "i"}})
 	}
 	if serviceCol != "*" {
-		match = append(match, bson.E{"service", primitive.Regex{Pattern: "/" + serviceCol + "/", Options: "i"}})
+		match = append(match, bson.E{"service", primitive.Regex{Pattern: serviceCol, Options: "i"}})
 	}
 	if apiCol != "*" {
-		match = append(match, bson.E{Key: "method", Value: primitive.Regex{Pattern: "/" + apiCol + "/", Options: "i"}})
+		match = append(match, bson.E{Key: "method", Value: primitive.Regex{Pattern:  apiCol , Options: "i"}})
 	}
 
 	pipeline = append(pipeline, bson.M{"$match": match}) //user
