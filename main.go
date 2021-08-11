@@ -10,7 +10,7 @@ import (
 func main() {
 	var port int
 	var mongoHost string
-	flag.StringVar(&mongoHost, "mongodb", "mongodb://47.251.4.254:27017", "mongodb host")
+	flag.StringVar(&mongoHost, "mongodb", "mongodb://127.0.0.1:27017", "mongodb host")
 	//flag.StringVar(&mongoHost, "mongodb", "mongodb://8.130.160.22:27017", "mongodb host")
 	flag.IntVar(&port, "port", 8080, "server port")
 	flag.Parse()
