@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"golang.org/x/xerrors"
 	"log"
 	"net/http"
 	"strings"
@@ -29,7 +30,6 @@ func checkRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (conf *Config) reqQuery(w http.ResponseWriter, r *http.Request) {
-	log.Println("Time Series Query")
 	var result TimeSeriesQuery
 	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -52,8 +52,9 @@ func (conf *Config) reqQuery(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if q.Type == "table" {
+			log.Println("Table Query")
 			resp := TableResponse{Type: v.Type}
-			keys, rows, err := sp.GetTableData(q.DB, q.Collection, q.TimeCol, q.From, q.To)
+			keys, rows, err := sp.GetTableData(q.DB, q.Collection, q.UserCol, q.ServiceCol, q.TimeCol, q.From, q.To)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -73,6 +74,7 @@ func (conf *Config) reqQuery(w http.ResponseWriter, r *http.Request) {
 			resbytes = append(resbytes, bytes...)
 			resbytes = append(resbytes, []byte(",")...)
 		} else if q.Type == "timeserie" {
+			log.Println("Time Series Query")
 			resp := TimeSeriesResponse{Target: v.Target}
 			resp.DataPoint, err = sp.GetTimeSeriesData(q.DB, q.Collection, q.UserCol, q.ServiceCol, q.ApiCol, q.TimeCol, q.From, q.To, q.IntervalMs)
 			if err != nil {
@@ -101,17 +103,28 @@ func (q *TSQuery) parseTarget(target string) error {
 	res := strings.Split(target, ".")
 	if q.Type == "timeserie" && len(res) < 3 {
 		return ERRFormat
-	} else if q.Type == "table" && len(res) < 2 {
+	} else if q.Type == "table" && len(res) < 3 { //user/service/time
 		return ERRFormat
 	}
 	q.DB = res[0]
 	q.Collection = res[1]
 	if q.Type == "timeserie" {
 		columns := TimeSeriesColumnRegexp(res[2])
-		q.UserCol = columns[0]
-		q.ServiceCol = columns[1]
-		q.ApiCol = columns[2]
-		q.TimeCol = columns[3]
+		if len(columns) != 4 {
+			return xerrors.New("colum not match")
+		}
+		q.UserCol = strings.Trim(columns[0], " \t")
+		q.ServiceCol = strings.Trim(columns[1], " \t")
+		q.ApiCol = strings.Trim(columns[2], " \t")
+		q.TimeCol = strings.Trim(columns[3], " \t")
+	} else {
+		columns := TimeSeriesColumnRegexp(res[2])
+		if len(columns) != 3 {
+			return xerrors.New("colum not match")
+		}
+		q.UserCol = strings.Trim(columns[0], " \t")
+		q.ServiceCol = strings.Trim(columns[1], " \t")
+		q.TimeCol = strings.Trim(columns[2], " \t")
 	}
 	return nil
 }

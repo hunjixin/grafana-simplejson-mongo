@@ -5,59 +5,85 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"reflect"
 	"strconv"
 	"time"
 )
 
-func (sp *SessionProvider) GetTableData(dbname string, collection string, timecol string, from time.Time, to time.Time) ([][]string, [][]interface{}, error) {
-	var keys [][]string
-	var rows [][]interface{}
+func (sp *SessionProvider) GetTableData(dbname string, collection string, userCol, serviceCol string, timecol string, from time.Time, to time.Time) ([][]string, [][]interface{}, error) {
 	c := sp.Session.Database(dbname).Collection(collection)
+	ctx := context.Background()
+	sr := c.FindOne(ctx, bson.M{})
+	err := sr.Err()
+	if err != nil {
+		return nil, nil, err
+	}
+	var judge bson.M
+	err = sr.Decode(&judge)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	var find bson.M
+	timecolType := reflect.TypeOf(judge[timecol]).Kind()
+
+	match := bson.M{}
 	if timecol != "" {
-		find = bson.M{
-			timecol: bson.M{
-				"$gt": from,
-				"$lt": to,
-			},
+		var trange bson.M
+		switch timecolType {
+		case reflect.String:
+			trange = bson.M{"$gte": from.Format("20060102150405"), "$lte": to.Format("20060102150405")}
+		case reflect.Int, reflect.Float64:
+			intFrom, _ := strconv.Atoi(from.Format("20060102150405"))
+			intTo, _ := strconv.Atoi(to.Format("20060102150405"))
+			trange = bson.M{"$gte": intFrom, "$lte": intTo}
+		default:
+			trange = bson.M{"$gte": from, "$lte": to}
 		}
-	} else {
-		find = nil
+
+		match[timecol] = trange
+	}
+	if userCol != "*" {
+		match["name"] = primitive.Regex{Pattern: userCol, Options: "i"}
+	}
+	if serviceCol != "*" {
+		match["service"] = primitive.Regex{Pattern: serviceCol, Options: "i"}
+	}
+
+	pipeline := []bson.M{{"$match": match}}
+
+	pipeline = append(pipeline, bson.M{
+		"$group": bson.M{
+			"_id":   "$method",
+			"value": bson.M{"$sum": 1.0},
+		},
+	})
+	pipeline = append(pipeline, bson.M{
+		"$sort": bson.M{
+			"value": -1.0,
+		},
+	})
+
+	cur, err := c.Aggregate(ctx, pipeline, options.Aggregate().SetMaxAwaitTime(time.Minute).SetBatchSize(500))
+	if err != nil {
+		return nil, nil, err
 	}
 
 	var results []bson.M
-	ctx := context.TODO()
-	cur, err := c.Find(ctx, find)
-	if err != nil {
-		log.Println(err)
-		return keys, rows, err
-	}
 	err = cur.All(ctx, &results)
 	if err != nil {
-		log.Println(err)
-		return keys, rows, err
+		return nil, nil, err
 	}
 
-	if len(results) < 1 {
-		return keys, rows, nil
-	}
-	for k, v := range results[0] {
-		var key []string
-		key = append(key, k)
-		key = append(key, defineType(v))
-		keys = append(keys, key)
+	var res [][]interface{}
+	for _, v := range results {
+		array := make([]interface{}, 2)
+		array[0] = convertString(v["_id"])
+		array[1] = convertFloat(v["value"])
+		res = append(res, array)
 	}
 
-	for i := 0; i < len(results); i++ {
-		var row []interface{}
-		for _, key := range keys {
-			row = append(row, convertString(results[i][key[0]]))
-		}
-		rows = append(rows, row)
-	}
-	return keys, rows, nil
+	return [][]string{{"api", "string"}, {"value", "number"}}, res, nil
 }
 
 func defineType(v interface{}) string {
