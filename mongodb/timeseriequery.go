@@ -78,7 +78,7 @@ func BuildTimeSeriesPipe(userCol, serviceCol, apiCol, timecol string, from time.
 	default:
 		trange = bson.M{timecol: bson.M{"$gte": from, "$lte": to}}
 	}
-
+	trange["name"] = bson.M{"$ne": "admin"}
 	pipeline := []bson.M{{"$match": bson.M{"$and": []interface{}{trange}}}} //time
 
 	match := bson.D{}
