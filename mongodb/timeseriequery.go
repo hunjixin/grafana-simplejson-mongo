@@ -4,6 +4,7 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"reflect"
 	"sort"
@@ -28,7 +29,7 @@ func (sp *SessionProvider) GetTimeSeriesData(dbname string, collection string, u
 
 	timecolType := reflect.TypeOf(judge[timeCol]).Kind()
 	pipeline := BuildTimeSeriesPipe(userCol, serviceCol, apiCol, timeCol, from, to, intervalMs, timecolType)
-	cur, err := c.Aggregate(ctx, pipeline)
+	cur, err := c.Aggregate(ctx, pipeline, options.Aggregate().SetAllowDiskUse(true))
 	if err != nil {
 		return res, err
 	}
@@ -83,14 +84,15 @@ func BuildTimeSeriesPipe(userCol, serviceCol, apiCol, timecol string, from time.
 
 	match := bson.D{}
 	if userCol != "*" {
-		match = append(match, bson.E{Key: "name", Value: bson.D{{"$regex", primitive.Regex{Pattern: userCol, Options: "i"}}}})
+		match = append(match, bson.E{"name", primitive.Regex{Pattern: userCol, Options: "i"}})
 	}
 	if serviceCol != "*" {
-		match = append(match, bson.E{Key: "service", Value: bson.D{{"$regex", primitive.Regex{Pattern: serviceCol, Options: "i"}}}})
+		match = append(match, bson.E{"service", primitive.Regex{Pattern: serviceCol, Options: "i"}})
 	}
 	if apiCol != "*" {
-		match = append(match, bson.E{Key: "method", Value: bson.D{{"$regex", primitive.Regex{Pattern: apiCol, Options: "i"}}}})
+		match = append(match, bson.E{Key: "method", Value: primitive.Regex{Pattern: apiCol, Options: "i"}})
 	}
+
 	pipeline = append(pipeline, bson.M{"$match": match}) //user
 
 	pipeline = append(pipeline, bson.M{

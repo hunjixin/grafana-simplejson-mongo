@@ -14,9 +14,8 @@ func (conf *Config) reqSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	//{用户，服务,api,time}
 	bytes, err := json.Marshal([]string{
-		"traces.call",              //no work
+		"traces.call.{*,*, time}",  //某个用户 某个服务
 		"traces.call.{*,*,*,time}", //某个用户 api
 	})
 	if err != nil {
